@@ -2,9 +2,13 @@
 """02 数据导入与清洗
 
 - 读取 UCI Pima 糖尿病数据集（768 条 × 8 项生理指标 + 标签）
-- 原始数据写入 MySQL patient_raw 表
+- 原始数据写入 MySQL patient_raw 表（训练脚本 03 以此为准）
 - 异常 0 值（Glucose/BloodPressure/SkinThickness/Insulin/BMI）按中位数填充
 - 清洗结果写入 patient_clean 表，并导出带表头 CSV（data/processed/）
+
+注意：patient_clean / 清洗 CSV 仅作数据预览与核对用（全量中位数填充）。
+模型训练由 03 脚本在划分训练/测试集之后，通过 Pipeline 内的 SimpleImputer
+仅用训练集统计量完成填充，避免测试集信息泄漏。
 
 可重复执行（先 TRUNCATE 再导入）。
 """

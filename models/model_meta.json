@@ -1,5 +1,19 @@
 {
   "selected_model": "GBDT",
+  "selection_rule": "CV-AUC 统计同档（差距<1标准差），按部署需求选 GBDT：特征重要性支撑产品端贡献度展示，树模型可捕捉非线性关系",
+  "threshold": 0.375,
+  "threshold_rule": "训练集五折 OOF 概率，召回率≥0.70 时最大化精确率",
+  "threshold_oof": {
+    "precision": 0.658,
+    "recall": 0.7103
+  },
+  "deployed_test_metrics": {
+    "accuracy": 0.7273,
+    "precision": 0.5968,
+    "recall": 0.6852,
+    "f1": 0.6379,
+    "auc": 0.8204
+  },
   "feature_columns": [
     "pregnancies",
     "glucose",
@@ -17,8 +31,11 @@
       "recall": 0.5,
       "f1": 0.5455,
       "auc": 0.813,
-      "cv_auc_mean": 0.8433,
-      "cv_auc_std": 0.0293
+      "cv_auc_mean": 0.843,
+      "cv_auc_std": 0.0291,
+      "best_params": {
+        "clf__C": 1.0
+      }
     },
     "SVM": {
       "accuracy": 0.7208,
@@ -26,8 +43,12 @@
       "recall": 0.5185,
       "f1": 0.5657,
       "auc": 0.8059,
-      "cv_auc_mean": 0.8334,
-      "cv_auc_std": 0.0211
+      "cv_auc_mean": 0.8336,
+      "cv_auc_std": 0.0211,
+      "best_params": {
+        "clf__estimator__C": 0.5,
+        "clf__estimator__gamma": 0.1
+      }
     },
     "GBDT": {
       "accuracy": 0.7338,
@@ -35,8 +56,15 @@
       "recall": 0.5185,
       "f1": 0.5773,
       "auc": 0.8204,
-      "cv_auc_mean": 0.8431,
-      "cv_auc_std": 0.0221
+      "cv_auc_mean": 0.844,
+      "cv_auc_std": 0.0228,
+      "best_params": {
+        "clf__learning_rate": 0.05,
+        "clf__max_depth": 2,
+        "clf__min_samples_leaf": 5,
+        "clf__n_estimators": 100,
+        "clf__subsample": 0.8
+      }
     }
   }
 }

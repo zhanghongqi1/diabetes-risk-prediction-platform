@@ -1,9 +1,9 @@
 ﻿feature,feature_cn,importance
-glucose,血糖(糖耐量2h),0.5151282622563734
-bmi,BMI,0.19869142173116905
-age,年龄,0.12074879746251063
-diabetes_pedigree_function,糖尿病谱系功能,0.07346248903979381
-insulin,血清胰岛素,0.04139467180767091
-pregnancies,怀孕次数,0.03260806083696583
-skin_thickness,皮褶厚度,0.013421169987299822
-blood_pressure,舒张压,0.004545126878216594
+glucose,血糖(糖耐量2h),0.5151282622563732
+bmi,BMI,0.19869142173116883
+age,年龄,0.12074879746251053
+diabetes_pedigree_function,糖尿病谱系功能,0.07346248903979401
+insulin,血清胰岛素,0.041394671807671125
+pregnancies,怀孕次数,0.032608060836965866
+skin_thickness,皮褶厚度,0.013421169987299766
+blood_pressure,舒张压,0.004545126878216558

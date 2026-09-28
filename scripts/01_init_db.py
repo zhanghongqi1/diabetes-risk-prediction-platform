@@ -10,7 +10,7 @@ import sys
 import pymysql
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from db_config import ROOT_DB_CONFIG, DB_NAME
+from db_config import ROOT_DB_CONFIG, DB_NAME, APP_DB_PASSWORD
 
 SQL_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "init_db.sql")
 
@@ -34,6 +34,11 @@ def split_sql(sql_text: str):
 def main():
     with open(SQL_FILE, "r", encoding="utf-8") as f:
         sql_text = f.read()
+    # 若通过环境变量 / .env 修改了应用账号密码，同步替换 SQL 中的默认密码
+    if APP_DB_PASSWORD != "Diabetes@2026":
+        sql_text = sql_text.replace(
+            "IDENTIFIED BY 'Diabetes@2026'",
+            "IDENTIFIED BY '%s'" % APP_DB_PASSWORD.replace("'", "''"))
     statements = split_sql(sql_text)
 
     conn = pymysql.connect(**ROOT_DB_CONFIG)
