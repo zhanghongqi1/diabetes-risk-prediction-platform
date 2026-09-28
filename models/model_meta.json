@@ -1,0 +1,42 @@
+{
+  "selected_model": "GBDT",
+  "feature_columns": [
+    "pregnancies",
+    "glucose",
+    "blood_pressure",
+    "skin_thickness",
+    "insulin",
+    "bmi",
+    "diabetes_pedigree_function",
+    "age"
+  ],
+  "metrics": {
+    "LR": {
+      "accuracy": 0.7078,
+      "precision": 0.6,
+      "recall": 0.5,
+      "f1": 0.5455,
+      "auc": 0.813,
+      "cv_auc_mean": 0.8433,
+      "cv_auc_std": 0.0293
+    },
+    "SVM": {
+      "accuracy": 0.7208,
+      "precision": 0.6222,
+      "recall": 0.5185,
+      "f1": 0.5657,
+      "auc": 0.8059,
+      "cv_auc_mean": 0.8334,
+      "cv_auc_std": 0.0211
+    },
+    "GBDT": {
+      "accuracy": 0.7338,
+      "precision": 0.6512,
+      "recall": 0.5185,
+      "f1": 0.5773,
+      "auc": 0.8204,
+      "cv_auc_mean": 0.8431,
+      "cv_auc_std": 0.0221
+    }
+  }
+}
