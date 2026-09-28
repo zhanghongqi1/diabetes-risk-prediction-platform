@@ -9,9 +9,9 @@
 接口：
 - GET  /                       前端页面
 - GET  /api/health             健康检查（模型 + 数据库）
-- GET  /api/meta               模型指标 / 特征重要性
-- POST /api/predict            单例风险评估
-- POST /api/predict/batch      批量导入（CSV/Excel）
+- GET  /api/meta               模型指标 / 特征重要性 / 部署阈值
+- POST /api/predict            单例风险评估（含输入范围校验）
+- POST /api/predict/batch      批量导入（CSV/Excel，逐行校验）
 - GET  /api/history            最近预测记录
 - GET  /api/template           批量导入模板下载
 """
@@ -30,7 +30,8 @@ import io
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, "scripts"))
-from db_config import APP_DB_CONFIG, FEATURE_COLUMNS, FEATURE_LABELS_CN, MODEL_DIR
+from db_config import (APP_DB_CONFIG, FEATURE_COLUMNS, FEATURE_LABELS_CN,
+                       ZERO_AS_MISSING, INPUT_RANGES, MODEL_DIR)
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 
@@ -38,6 +39,8 @@ model = joblib.load(os.path.join(MODEL_DIR, "selected_model.pkl"))
 with open(os.path.join(MODEL_DIR, "model_meta.json"), "r", encoding="utf-8") as f:
     meta = json.load(f)
 SELECTED = meta["selected_model"]
+# 部署判定阈值（训练阶段基于 OOF 召回率目标调优，见 03_train_models.py）
+THRESHOLD = float(meta.get("threshold", 0.5))
 fi = pd.read_csv(os.path.join(MODEL_DIR, "feature_importance.csv"))
 
 
@@ -53,10 +56,45 @@ def risk_level(p: float) -> str:
     return "高风险"
 
 
+def validate_input(values: dict) -> dict:
+    """校验并规范化 8 项输入指标。
+
+    规则：全部必填且为数字；临床上不可能的取值拒绝；
+    ZERO_AS_MISSING 中的 5 项指标允许填 0（表示"未测"，
+    由模型 Pipeline 按训练集中位数自动填充）。
+    非法输入抛 ValueError（中文提示，可合并多项错误）。
+    """
+    cleaned, errors = {}, []
+    for c in FEATURE_COLUMNS:
+        raw = values.get(c)
+        if raw is None or raw == "":
+            errors.append(f"{FEATURE_LABELS_CN[c]}({c}) 缺失")
+            continue
+        try:
+            v = float(raw)
+        except (TypeError, ValueError):
+            errors.append(f"{FEATURE_LABELS_CN[c]}({c}) 不是数字: {raw}")
+            continue
+        lo, hi = INPUT_RANGES[c]
+        if v == 0 and c in ZERO_AS_MISSING:
+            cleaned[c] = 0.0
+        elif not (lo <= v <= hi):
+            errors.append(
+                f"{FEATURE_LABELS_CN[c]}({c})={v} 超出合理范围 [{lo}, {hi}]"
+                + ("（未测请填 0）" if c in ZERO_AS_MISSING else ""))
+        else:
+            cleaned[c] = v
+    if errors:
+        raise ValueError("；".join(errors))
+    return cleaned
+
+
 def predict_one(values: dict):
-    x = np.array([[float(values[c]) for c in FEATURE_COLUMNS]])
+    # Pipeline 内 ColumnTransformer 按列名取列，必须以 DataFrame 传入
+    x = pd.DataFrame([[float(values[c]) for c in FEATURE_COLUMNS]],
+                     columns=FEATURE_COLUMNS)
     prob = float(model.predict_proba(x)[0, 1])
-    cls = int(prob >= 0.5)
+    cls = int(prob >= THRESHOLD)
     return prob, cls, risk_level(prob)
 
 
@@ -79,6 +117,7 @@ def health():
         db_err = str(e)
     return jsonify({"model_loaded": model is not None,
                     "selected_model": SELECTED,
+                    "threshold": THRESHOLD,
                     "mysql_ok": db_ok, "mysql_error": db_err,
                     "patient_clean_rows": n_clean})
 
@@ -87,6 +126,10 @@ def health():
 def get_meta():
     return jsonify({
         "selected_model": SELECTED,
+        "threshold": THRESHOLD,
+        "threshold_rule": meta.get("threshold_rule"),
+        "threshold_oof": meta.get("threshold_oof"),
+        "deployed_test_metrics": meta.get("deployed_test_metrics"),
         "metrics": meta["metrics"],
         "feature_columns": FEATURE_COLUMNS,
         "feature_labels_cn": FEATURE_LABELS_CN,
@@ -118,16 +161,18 @@ def _save_records(records, batch_no):
 def predict():
     data = request.get_json(force=True)
     try:
-        prob, cls, level = predict_one(data)
-    except (KeyError, ValueError, TypeError) as e:
+        cleaned = validate_input(data)
+    except (ValueError, TypeError) as e:
         return jsonify({"error": f"输入参数有误: {e}"}), 400
-    rec = {c: float(data[c]) for c in FEATURE_COLUMNS}
+    prob, cls, level = predict_one(cleaned)
+    rec = {c: float(cleaned[c]) for c in FEATURE_COLUMNS}
     rec.update(risk_probability=round(prob, 4), risk_level=level,
                predicted_class=cls, actual_outcome=data.get("actual_outcome"))
     _save_records([rec], batch_no=None)
     return jsonify({"risk_probability": round(prob, 4),
                     "risk_level": level,
                     "predicted_class": cls,
+                    "threshold": THRESHOLD,
                     "model_name": SELECTED})
 
 
@@ -146,12 +191,25 @@ def predict_batch():
         if missing:
             return jsonify({"error": f"缺少列: {','.join(missing)}"}), 400
         X = df[FEATURE_COLUMNS].astype(float)
+
+        # 逐行范围校验（行号为文件行号，含表头偏移 +2）
+        bad = []
+        for rn, (_, row) in enumerate(df.iterrows(), start=2):
+            try:
+                validate_input(row.to_dict())
+            except ValueError as e:
+                bad.append(f"第{rn}行: {e}")
+        if bad:
+            return jsonify({"error": f"共 {len(bad)} 行数据非法："
+                                     + "；".join(bad[:5])
+                                     + ("……" if len(bad) > 5 else "")}), 400
+
         probs = model.predict_proba(X)[:, 1]
         batch_no = dt.datetime.now().strftime("B%Y%m%d%H%M%S") + "-" + uuid.uuid4().hex[:6]
         records, results = [], []
         for i, (_, row) in enumerate(df.iterrows()):
             p = float(probs[i])
-            cls = int(p >= 0.5)
+            cls = int(p >= THRESHOLD)
             rec = {c: float(row[c]) for c in FEATURE_COLUMNS}
             rec["actual_outcome"] = (int(row["outcome"])
                                      if "outcome" in df.columns and pd.notna(row.get("outcome"))
@@ -165,6 +223,7 @@ def predict_batch():
         df_out = pd.DataFrame(results)
         summary = df_out["risk_level"].value_counts().to_dict()
         return jsonify({"batch_no": batch_no, "total": len(results),
+                        "threshold": THRESHOLD,
                         "summary": summary, "results": results[:200]})
     except Exception as e:  # noqa
         return jsonify({"error": f"批量预测失败: {e}"}), 400
@@ -200,5 +259,5 @@ def template():
 
 
 if __name__ == "__main__":
-    print(f"选定模型: {SELECTED}，启动 http://127.0.0.1:5000")
+    print(f"选定模型: {SELECTED}，部署阈值 τ={THRESHOLD}，启动 http://127.0.0.1:5000")
     app.run(host="127.0.0.1", port=5000, debug=False)
