@@ -1,0 +1,15 @@
+﻿读取原始数据: D:\软件编写\DiabetesRiskPlatform\data\raw\pima-indians-diabetes.data.csv
+原始数据维度: (768, 9)  阳性/阴性: 268 / 500
+
+异常 0 值填充（中位数）:
+  glucose                      缺失   5 处 -> 中位数 117.0
+  blood_pressure               缺失  35 处 -> 中位数 72.0
+  skin_thickness               缺失 227 处 -> 中位数 29.0
+  insulin                      缺失 374 处 -> 中位数 125.0
+  bmi                          缺失  11 处 -> 中位数 32.3
+
+清洗 CSV 已导出: D:\软件编写\DiabetesRiskPlatform\data\processed\pima-indians-diabetes.clean.csv
+
+MySQL 导入完成: patient_raw=768 行, patient_clean=768 行
+标签分布: {1: 268, 0: 500}
+数据导入验证通过。

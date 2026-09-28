@@ -1,0 +1,14 @@
+﻿mysqld.exe : 2026-09-16T08:21:43.587118Z 0 [System] [MY-015017] [Server] MySQL Server Initialization - start.
+所在位置 行:1 字符: 1
++ & "D:\软件编写\DiabetesRiskPlatform\mysql\bin\mysqld.exe" --defaults-file ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (2026-09-16T08:2...zation - start.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+2026-09-16T08:21:43.599443Z 0 [System] [MY-013169] [Server] D:\�����д\DiabetesRiskPlatform\mysql\bin\mysqld.exe (mysqld
+ 8.4.10) initializing of server in progress as process 15684
+2026-09-16T08:21:43.638492Z 1 [System] [MY-013576] [InnoDB] InnoDB initialization has started.
+2026-09-16T08:21:44.046722Z 1 [System] [MY-013577] [InnoDB] InnoDB initialization has ended.
+2026-09-16T08:21:45.531290Z 6 [Warning] [MY-010453] [Server] root@localhost is created with an empty password ! Please 
+consider switching off the --initialize-insecure option.
+2026-09-16T08:21:47.551657Z 0 [System] [MY-015018] [Server] MySQL Server Initialization - end.
