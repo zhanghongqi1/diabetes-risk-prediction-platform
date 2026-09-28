@@ -1,0 +1,4 @@
+# 开发/测试依赖（包含运行时依赖）：
+#   venv\Scripts\python.exe -m pip install -r requirements-dev.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+-r requirements.txt
+pytest>=8.0
